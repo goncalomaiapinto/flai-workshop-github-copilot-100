@@ -19,12 +19,24 @@ document.addEventListener("DOMContentLoaded", () => {
         activityCard.className = "activity-card";
 
         const spotsLeft = details.max_participants - details.participants.length;
+        const participantsHTML = details.participants.length > 0
+          ? `<ul class="participants-list">${details.participants.map(p =>
+              `<li>
+                <span>${p}</span>
+                <button class="unregister-btn" data-activity="${name}" data-email="${p}" title="Unregister">&times;</button>
+              </li>`
+            ).join("")}</ul>`
+          : `<p class="no-participants">No participants yet. Be the first!</p>`;
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants-section">
+            <h5>Registered Participants</h5>
+            ${participantsHTML}
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
@@ -62,6 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        await fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -78,6 +91,31 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.className = "error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
+    }
+  });
+
+  // Handle unregister button clicks
+  activitiesList.addEventListener("click", async (event) => {
+    const btn = event.target.closest(".unregister-btn");
+    if (!btn) return;
+
+    const activity = btn.dataset.activity;
+    const email = btn.dataset.email;
+
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`,
+        { method: "DELETE" }
+      );
+
+      if (response.ok) {
+        await fetchActivities();
+      } else {
+        const result = await response.json();
+        console.error("Unregister failed:", result.detail);
+      }
+    } catch (error) {
+      console.error("Error unregistering:", error);
     }
   });
 
